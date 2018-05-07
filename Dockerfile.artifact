@@ -1,0 +1,21 @@
+FROM maven:latest
+#the build
+ENV WORKINGDIR=/tmp
+ADD ./src ${WORKINGDIR}/src
+ADD ./pom.xml ${WORKINGDIR}/pom.xml
+ADD ./start.sh ${WORKINGDIR}/start.sh
+
+#download minio
+RUN wget -O,  --output-document=${WORKINGDIR}/minio https://dl.minio.io/server/minio/release/linux-amd64/minio && \
+    chmod +x ${WORKINGDIR}/minio
+
+#download opensll for key creation
+RUN apt-get -y install openssl
+
+WORKDIR ${WORKINGDIR}
+RUN mvn install compile -DskipTests
+#the runtime
+EXPOSE 8080
+
+#CMD ["mvn","spring-boot:run"]
+CMD ["sh", "start.sh"]
