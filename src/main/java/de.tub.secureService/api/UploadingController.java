@@ -75,7 +75,6 @@ public class UploadingController {
             String objectName= sb.toString().toLowerCase();
             //Create a MinioUploader and upload the file
             MinioUploader uploader = new MinioUploader();
-            System.out.println("Kurz vorm insert");
             uploader.insertObject(objectName ,completeStream, size,"application/octet-stream");
             return objectName;
         } catch (Exception e) {
