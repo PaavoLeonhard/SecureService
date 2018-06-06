@@ -1,15 +1,15 @@
 package de.tub.secureService.api;
 
-import com.google.common.primitives.Bytes;
 import de.tub.secureService.service.MinioUploader;
 import org.apache.commons.compress.utils.IOUtils;
+import org.apache.http.HttpResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.ws.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
-import java.util.Collections;
 
 @RestController
 public class UploadingController {
@@ -27,17 +27,17 @@ public class UploadingController {
         try {
             MinioUploader uploader  =new MinioUploader();
             InputStream is = uploader.getObject(fileName);
-            String test = new String(Bytes.toArray(Collections.singleton(is.read())));
-            //byte [] test =IOUtils.toByteArray(is);
-            System.out.println(test);
-            IOUtils.copy(is, response.getOutputStream());
-            response.flushBuffer();
+            if(is ==null ){
+                response.getOutputStream().print(" ");
+                response.flushBuffer();
+            }else{
+                IOUtils.copy(is, response.getOutputStream());
+                response.flushBuffer();
+            }
         } catch (IOException ex) {
             throw new RuntimeException("IOError writing file to output stream");
         }
-
     }
-
 
     /**
      *  Takes files that are uploaded to the service and stores them in Minio. Returns the url und which it can later be retrievevd
@@ -46,7 +46,7 @@ public class UploadingController {
      * @throws IOException
      */
     @RequestMapping(method = RequestMethod.POST, value= "/",consumes = "multipart/form-data")
-    public String uploadingPost(@RequestParam(value = "type") MultipartFile[] uploadingFiles) throws IOException {
+    public javax.ws.rs.core.Response uploadingPost(@RequestParam(value = "type") MultipartFile[] uploadingFiles) throws IOException {
         //Convert the MultipartFile into a Stream
         InputStream completeStream = null;
         String contentType = null;
@@ -56,10 +56,11 @@ public class UploadingController {
         }
         completeStream = uploadingFiles[0].getInputStream();
         long size = 0;
-        for(MultipartFile uploadedFile : uploadingFiles) {
-            completeStream = new java.io.SequenceInputStream(completeStream, uploadedFile.getInputStream());
-            uploadedFile.getContentType();
-            size = size + uploadedFile.getSize();
+
+        for(int i=1; i<uploadingFiles.length;i++) {
+            completeStream = new java.io.SequenceInputStream(completeStream, uploadingFiles[i].getInputStream());
+            uploadingFiles[i].getContentType();
+            size = size + uploadingFiles[i].getSize();
         }
 
         //Hash the current Time to create a url and object name of the file
@@ -76,10 +77,11 @@ public class UploadingController {
             //Create a MinioUploader and upload the file
             MinioUploader uploader = new MinioUploader();
             uploader.insertObject(objectName ,completeStream, size,"application/octet-stream");
-            return objectName;
+
+            return javax.ws.rs.core.Response.ok(objectName).build();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return javax.ws.rs.core.Response.status(500).build();
     }
 }
