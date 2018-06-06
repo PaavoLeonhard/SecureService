@@ -1,15 +1,24 @@
 package de.tub.secureService.service;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import io.minio.MinioClient;
+import io.minio.errors.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.xmlpull.v1.XmlPullParserException;
+
 import javax.crypto.*;
 
 
 public class MinioUploader {
     private MinioClient minioClient;
     //private String endpoint = "http://localhost:9000";
-    private String endpoint ="http://127.0.0.1:9000"; //"http://172.17.0.2:9000"; 172.17.0.2:9000
+    private String endpoint ="http://172.17.0.2:9000"; //"http://172.17.0.2:9000"; 172.17.0.2:9000
     //private String endpoint ="http://172.17.0.1:9000";
     //private String endpoint = "http://172.17.0.2:9000";
     private final String bucketName  = "examplebucks";
@@ -24,7 +33,6 @@ public class MinioUploader {
             //Check if the Bucket is already existing
             if(!minioClient.bucketExists(bucketName)) {
                 minioClient.makeBucket(bucketName);
-                System.out.println("MakeBucket");
             }
 
         } catch (Exception e) {
@@ -39,17 +47,19 @@ public class MinioUploader {
      * @param size
      * @param contentType
      */
-    public void insertObject (String objectName, InputStream input,long size, String contentType) {
-        try {
-            //Create a secret key to encrypt the file
-            SecretKey key = KeyGenerator.getInstance("AES").generateKey();
-            System.out.println("Insert bucket exist"+ minioClient.bucketExists(bucketName));
-            fileMapping.put(objectName, key);
-            minioClient.putObject(bucketName,objectName,input, size, contentType, key);
+    public void insertObject (String objectName, InputStream input,long size, String contentType) throws XmlPullParserException, InvalidBucketNameException, NoSuchAlgorithmException, InvalidArgumentException, InsufficientDataException, InvalidKeyException, ErrorResponseException, InvalidAlgorithmParameterException, NoSuchPaddingException, IOException, NoResponseException, IllegalBlockSizeException, InternalException, BadPaddingException {
 
-        } catch (Exception e) {
+            //Create a secret key to encrypt the file
+        SecretKey key = null;
+        try {
+            key = KeyGenerator.getInstance("AES").generateKey();
+        } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
+        fileMapping.put(objectName, key);
+        minioClient.putObject(bucketName,objectName,input, size, contentType, key);
+
+
     }
 
     public void deleteObject(String bucketName, String objectName) {
@@ -63,6 +73,7 @@ public class MinioUploader {
         try {
             minioClient.removeObject(bucketName, objectName);
             minioClient.putObject(bucketName, objectName, filename);
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
